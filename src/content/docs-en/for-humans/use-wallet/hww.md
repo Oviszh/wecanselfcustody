@@ -21,9 +21,9 @@ In 2016, Trezor gave its website a major redesign and changed the narrative from
   <figcaption>May 2023 · Ledger Support: "Technically speaking, it is and always has been possible to write firmware that facilitates key extraction. You have always trusted Ledger not to deploy such firmware, whether you knew it or not." (The tweet was later deleted.)</figcaption>
 </figure>
 
-Assume that every hardware wallet is capable of uploading your master private key to a server with a single firmware update. Based on that assumption, this article sets out a few bottom-line rules for using one — rules that depend not on a manufacturer's promises, but on what you can actually stick to yourself.
+Assume that every hardware wallet is capable of uploading the master private key to a server with a single firmware update. Based on that assumption, this article sets out a few bottom-line rules for using one — rules that depend not on a manufacturer's promises, but on what you can actually stick to yourself.
 
-### My rules for using a hardware wallet
+### Rules for using a hardware wallet
 
 1. **Signing device only** — never generate seed words on the hardware wallet.
 2. **Never use a passphrase-less wallet** — that way, even if the seed words leak, nobody can be sure whether a hidden wallet sits behind them. Many people keep a small amount in a passphrase-less wallet as a "decoy", but now that BIP39 is everywhere, the decoy only tells an attacker: there are more coins hidden behind a passphrase on this seed — go ahead and spend resources cracking it.

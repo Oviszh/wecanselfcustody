@@ -19,7 +19,7 @@ Ledger Recover proved that, technically, private keys can leave the device — i
 
 You must assume the possibility exists: a single firmware-update process could upload the private keys inside the device to a server.
 
-## My best practices
+## Hardware wallet best practices
 
 1. Once the seed words are imported, never connect the hardware wallet to its vendor's official app again.
 2. Pair it with third-party open-source wallet software such as Electrum or Sparrow — and enter the passphrase there too.
