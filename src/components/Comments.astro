@@ -1,0 +1,112 @@
+---
+// 评论区：Cusdis 官方托管版（https://cusdis.com）
+// 首次接入：到 https://cusdis.com 注册并创建站点后，
+// 把下面的 App ID 换成后台拿到的值（形如 'a1b2c3d4'），提交即全站文章页生效。
+// 未替换时（仍为占位值）整个评论区不渲染，构建不受影响。
+const CUSDIS_APP_ID = 'df80ab25-c6bc-4d78-a9f6-d67829bd6682';
+const CUSDIS_HOST = 'https://cusdis.com';
+
+import { ui, type Locale } from '../data/ui';
+
+interface Props {
+  locale?: Locale;
+  title?: string; // 页面标题，传给 Cusdis 后台，便于在管理面板识别评论来源
+}
+const { locale = 'en', title } = Astro.props;
+const t = ui(locale);
+
+const configured = CUSDIS_APP_ID !== 'YOUR_CUSDIS_APP_ID';
+// 每个语言版本、每篇文章独立评论区（否则中英文评论会混在同一个话题下）
+const pageId = `${locale}:${Astro.url.pathname}`;
+const pageUrl = new URL(Astro.url.pathname, Astro.site).href;
+---
+{
+  configured && (
+    <section class="comments" aria-label={locale === 'en' ? 'Comments' : '评论区'}>
+      <h2 class="comments__title">{t.commentsTitle}</h2>
+      <p class="comments__note">{t.commentsModerationNote}</p>
+      <div
+        id="cusdis_thread"
+        data-host={CUSDIS_HOST}
+        data-app-id={CUSDIS_APP_ID}
+        data-page-id={pageId}
+        data-page-url={pageUrl}
+        data-page-title={title ?? pageUrl}
+        data-lang={locale === 'zh' ? 'zh-cn' : 'en'}
+      />
+      <script is:inline async defer src="https://cusdis.com/js/cusdis.es.js" />
+      <script is:inline>
+        // Cusdis 官方嵌入靠 iframe 内部 postMessage 通知父页自动增高；
+        // 部分环境（本地预览 / 个别网络代理等）收不到该消息，评论窗会停在默认高度、
+        // 内容被裁切并出现框内滚动条。iframe 为 srcdoc、与页面同源，这里读其内容高度做兜底同步。
+        (function () {
+          const thread = document.getElementById('cusdis_thread');
+          if (!thread) return;
+          let timer;
+
+          // 压缩小窗内部：覆盖 Cusdis 自带 Tailwind 工具类的留白/字号/输入框高度，
+          // 使评论区更矮但宽度不变。选择器随其模板工具类而定；即便 Cusdis 改版失效，
+          // 也只是回落默认高度，不影响功能与宽度对齐。
+          const COMPACT_CSS =
+            'label.mb-2{font-size:.78rem;margin-bottom:.15rem;line-height:1.25}' +
+            'input.p-2,textarea.p-2{padding:.3rem .55rem;font-size:.85rem;line-height:1.35}' +
+            'textarea.h-24{height:5.2rem}' +
+            'button.p-2{padding:.25rem .65rem;font-size:.8rem;line-height:1.2}' +
+            '.gap-4{row-gap:.45rem;column-gap:.5rem}' +
+            '.px-1{padding-left:.2rem;padding-right:.2rem}' +
+            '.my-8,.mt-4{margin-top:.5rem}.my-8{margin-bottom:.5rem}' +
+            '';
+
+          const injectCompact = (d) => {
+            try {
+              if (thread.__cusdisCompact) return;
+              thread.__cusdisCompact = true;
+              const st = d.createElement('style');
+              st.textContent = COMPACT_CSS;
+              (d.head || d.documentElement).appendChild(st);
+            } catch (_) {}
+          };
+
+          const sync = () => {
+            const f = thread.querySelector('iframe');
+            if (!f) return;
+            try {
+              const d = f.contentDocument;
+              if (!d || !d.documentElement) return;
+              const h = d.documentElement.offsetHeight;
+              if (h > 0) f.style.height = h + 'px';
+            } catch (_) {
+              /* 跨源等场景静默，交回官方 resize 消息 */
+            }
+          };
+          const watch = () => {
+            const f = thread.querySelector('iframe');
+            if (!f) return;
+            let d;
+            try {
+              d = f.contentDocument;
+            } catch (_) {
+              return;
+            }
+            if (!d || !d.body) return; // 内部文档未就绪，稍后重试
+            clearInterval(timer);
+            try {
+              injectCompact(d);
+              d.addEventListener('DOMContentLoaded', sync);
+              new MutationObserver(sync).observe(d.body, {
+                childList: true,
+                subtree: true,
+                characterData: true,
+              });
+            } catch (_) {}
+            sync();
+          };
+          // 轮询等待 Cusdis 创建 iframe 且内部文档渲染完成
+          timer = setInterval(watch, 200);
+          setTimeout(() => clearInterval(timer), 15000);
+          window.addEventListener('resize', sync);
+        })();
+      </script>
+    </section>
+  )
+}

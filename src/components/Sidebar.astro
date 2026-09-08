@@ -1,0 +1,144 @@
+---
+import { navView, type NavViewSection, type NavViewItem } from '../data/nav';
+import { ui, type Locale } from '../data/ui';
+
+interface Props {
+  route: string; // 当前路由（已去掉语言前缀，不带首尾斜杠），用于高亮
+  locale?: Locale;
+}
+const { route, locale = 'en' } = Astro.props;
+const t = ui(locale);
+const SECTIONS = navView(locale);
+
+const isActive = (langless?: string) =>
+  !!langless && (route === langless || route.startsWith(langless + '/'));
+
+function sectionClasses(section: NavViewSection): string {
+  let cls = 'section ';
+  if (section.accent) cls += 'section--accent';
+  else if (section.indented) cls += 'section--plain section--indented';
+  else cls += 'section--plain';
+  if (section.children?.length) cls += ' has-children';
+  if (section.bordered === 'bottom') cls += ' nav-row--border-bottom';
+  else if (section.bordered) cls += ' nav-row--bordered';
+  return cls;
+}
+
+const leafClasses = (mono?: boolean, active?: boolean) =>
+  'nav-leaf' + (mono ? ' nav-leaf--mono' : '') + (active ? ' is-active' : '');
+
+/** 分组内任意后代处于当前页（用于折叠章节默认展开） */
+function groupActive(node: NavViewItem): boolean {
+  if (isActive(node.langless)) return true;
+  return (node.children ?? []).some((c) => isActive(c.langless));
+}
+
+function sectionActive(section: NavViewSection): boolean {
+  if (section.children?.length) return section.children.some(groupActive);
+  return isActive(section.langless);
+}
+
+const activeLeaf = (node: NavViewItem) => !!node.langless && route === node.langless;
+---
+<a class="sidebar__brand" href={locale === 'en' ? '/' : '/zh'} title={t.backToHome}>
+  <span class="sidebar__brand-name">Self custody</span>
+  <img class="sidebar__brand-icon" src="/assets/logo-icon.svg" alt="Self custody" />
+</a>
+<nav class="sidebar__nav" id="nav" aria-label={t.navAria}>
+  {
+    SECTIONS.map((section) =>
+      section.children?.length ? (
+        <div
+          class={sectionClasses(section)}
+          id={`section-${section.id}`}
+          data-section={section.id}
+          data-force-open={sectionActive(section) ? 'true' : undefined}
+        >
+          <div
+            class="section-head"
+            role="button"
+            tabindex="0"
+            aria-expanded="true"
+            aria-controls={`${section.id}-children`}
+          >
+            <img
+              class="chev"
+              src={section.accent ? '/assets/chevron.svg' : '/assets/chevron-2.svg'}
+              alt=""
+              aria-hidden="true"
+            />
+            {section.icon && (
+              <img
+                class={'section-head__icon' + (section.iconClass ? ` section-head__icon--${section.iconClass}` : '')}
+                src={section.icon}
+                alt=""
+                aria-hidden="true"
+              />
+            )}
+            <span class="section-head__label">{section.label}</span>
+          </div>
+          <div class="section-children" id={`${section.id}-children`}>
+            {
+              section.children.map((node) =>
+                node.children?.length ? (
+                  <>
+                    {node.href ? (
+                      <a
+                        class={'subsection subsection--link' + (groupActive(node) ? ' is-active' : '')}
+                        href={node.href}
+                      >
+                        {node.label}
+                      </a>
+                    ) : (
+                      <div class={'subsection' + (groupActive(node) ? ' is-active' : '')}>{node.label}</div>
+                    )}
+                    <div class="subsection-children">
+                      {node.children.map((leaf) => (
+                        <a
+                          class={leafClasses(leaf.mono, activeLeaf(leaf))}
+                          href={leaf.href}
+                          target={leaf.newTab ? '_blank' : undefined}
+                          rel={leaf.newTab ? 'noopener noreferrer' : undefined}
+                        >
+                          {leaf.label}
+                        </a>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <a
+                    class={leafClasses(node.mono, activeLeaf(node))}
+                    href={node.href}
+                    target={node.newTab ? '_blank' : undefined}
+                    rel={node.newTab ? 'noopener noreferrer' : undefined}
+                  >
+                    {node.label}
+                  </a>
+                )
+              )
+            }
+          </div>
+        </div>
+      ) : (
+        <div class={sectionClasses(section)}>
+          <a
+            class={'section-head' + (sectionActive(section) ? ' is-active' : '')}
+            data-route={section.id}
+            href={section.href}
+          >
+            <img class="chev" src="/assets/chevron-2.svg" alt="" aria-hidden="true" />
+            {section.icon && (
+              <img
+                class={'section-head__icon' + (section.iconClass ? ` section-head__icon--${section.iconClass}` : '')}
+                src={section.icon}
+                alt=""
+                aria-hidden="true"
+              />
+            )}
+            <span class="section-head__label">{section.label}</span>
+          </a>
+        </div>
+      )
+    )
+  }
+</nav>

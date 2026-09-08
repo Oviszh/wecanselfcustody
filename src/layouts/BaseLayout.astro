@@ -1,0 +1,144 @@
+---
+import '../styles/fonts.css';
+import '../styles/global.css';
+import Sidebar from '../components/Sidebar.astro';
+import Topbar from '../components/Topbar.astro';
+import SearchModal from '../components/SearchModal.astro';
+import { splitLocaleRoute } from '../data/nav';
+import { ui, type Locale } from '../data/ui';
+
+interface Props {
+  title?: string;
+  description?: string;
+  route?: string;        // 当前路由（不带首尾斜杠），用于侧边栏高亮
+  locale?: Locale;       // 页面语言（缺省按路由前缀推断）
+  langHref?: string;     // 语言切换目标（同页另一语言版本，无译文时退回对方首页）
+  isHome?: boolean;
+  ogType?: 'website' | 'article';
+  /** 另一语言版本的绝对 URL（用于 hreflang；两版都存在时才传） */
+  altCanonical?: string;
+  /** 社交分享图（og:image / twitter:image）；缺省按 locale 使用站点默认卡片 */
+  image?: string;
+  /** 发布 / 更新时间（OG article 时间标签 + JSON-LD） */
+  date?: Date;
+  updated?: Date;
+}
+
+const {
+  title,
+  description,
+  route = '',
+  locale: localeProp,
+  langHref,
+  isHome = false,
+  ogType = isHome ? 'website' : 'article',
+  altCanonical,
+  image,
+  date,
+  updated,
+} = Astro.props;
+
+const locale: Locale = localeProp ?? splitLocaleRoute(route).locale;
+const t = ui(locale);
+const stripped = splitLocaleRoute(route).rest;
+
+const pageTitle = title ? `${title} · ${t.siteName}` : t.siteTitle;
+const desc = description ?? t.defaultDescription;
+const canonical = new URL(isHome ? (locale === 'en' ? '/' : '/zh') : '/' + route, Astro.site);
+
+// 社交分享图：未指定时按语言回退到站点默认卡片
+const ogImage = new URL(image ?? (locale === 'zh' ? '/og-default-zh.png' : '/og-default.png'), Astro.site).href;
+const published = date ? date.toISOString() : undefined;
+const modifiedSrc = updated ?? date;
+const modified = modifiedSrc ? modifiedSrc.toISOString() : undefined;
+const rssHref = new URL(locale === 'zh' ? '/zh/rss.xml' : '/rss.xml', Astro.site).href;
+
+// 首页注入 WebSite 结构化数据（网站名 / 语言 / 描述）
+const websiteLd = isHome
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: t.siteName,
+      url: new URL(locale === 'en' ? '/' : '/zh', Astro.site).href,
+      inLanguage: t.htmlLang,
+      description: t.defaultDescription,
+    }
+  : null;
+---
+
+<!doctype html>
+<html lang={t.htmlLang}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={desc} />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#2f3131" media="(prefers-color-scheme: dark)" />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" type="application/rss+xml" title={`${t.siteName} · RSS`} href={rssHref} />
+    {altCanonical && <link rel="alternate" hreflang={locale === 'en' ? 'zh-CN' : 'en'} href={altCanonical} />}
+    {altCanonical && <link rel="alternate" hreflang={locale === 'en' ? 'en' : 'zh-CN'} href={canonical} />}
+    {altCanonical && <link rel="alternate" hreflang="x-default" href={locale === 'en' ? canonical : altCanonical} />}
+
+    <!-- Open Graph -->
+    <meta property="og:type" content={ogType} />
+    <meta property="og:title" content={title ?? t.siteTitle} />
+    <meta property="og:description" content={desc} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content={t.ogLocale} />
+    <meta property="og:site_name" content={t.siteName} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={t.siteName} />
+    {ogType === 'article' && published && <meta property="article:published_time" content={published} />}
+    {ogType === 'article' && modified && modified !== published && <meta property="article:modified_time" content={modified} />}
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title ?? t.siteTitle} />
+    <meta name="twitter:description" content={desc} />
+    <meta name="twitter:image" content={ogImage} />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    {websiteLd && <script type="application/ld+json" is:inline set:html={JSON.stringify(websiteLd)} />}
+    <script is:inline>
+      // 暗色模式：渲染前确定主题，避免闪烁（localStorage 优先，否则跟随系统）
+      (function () {
+        try {
+          var t = localStorage.getItem('sc-theme');
+          if (t !== 'light' && t !== 'dark') {
+            t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          }
+          document.documentElement.dataset.theme = t;
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body data-route={route || undefined}>
+    <aside class="sidebar" aria-label={t.navAria} data-pagefind-ignore>
+      <Sidebar route={stripped} locale={locale} />
+    </aside>
+    <div class="sidebar-backdrop" id="sidebar-backdrop" hidden></div>
+    <main class="main">
+      <Topbar locale={locale} langHref={langHref} data-pagefind-ignore />
+      <div class="content" id="content">
+        <div class="container">
+          <slot />
+        </div>
+        <footer class="footer" data-pagefind-ignore>
+          <div class="footer__inner">
+            <span>{t.siteTagline}</span>
+          </div>
+        </footer>
+      </div>
+    </main>
+    <SearchModal locale={locale} />
+    <script src="../scripts/sidebar.ts"></script>
+    <script src="../scripts/search.ts"></script>
+    <script src="../scripts/theme.ts"></script>
+  </body>
+</html>

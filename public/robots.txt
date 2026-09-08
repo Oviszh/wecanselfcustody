@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# 中英文站点地图（含 hreflang 交叉链接）
+Sitemap: https://selfcustodyforhumans.com/sitemap-index.xml

@@ -1,0 +1,59 @@
+---
+import { getCollection, getEntry, render } from 'astro:content';
+import DocLayout from '../layouts/DocLayout.astro';
+import PrevNext from '../components/PrevNext.astro';
+import Comments from '../components/Comments.astro';
+import { prevNext, routeFromId } from '../data/nav';
+import { ui } from '../data/ui';
+
+// 默认语言（英文）文章位于根路径：/create-wallet、/use-wallet/old-phone、/thinkings/about-hww …
+export async function getStaticPaths() {
+  const docs = await getCollection('docs-en');
+  return docs
+    .filter((e) => e.id !== 'home' && !e.data.draft)
+    .map((entry) => ({
+      // 参数为去掉 for-humans 分组段的展示 slug，页面 URL 即根路径
+      params: { slug: routeFromId(entry.id) },
+      props: { entry },
+    }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const route = routeFromId(entry.id);
+const isEmpty = !(entry.body ?? '').trim();
+const pn = prevNext(route, 'en');
+const t = ui('en');
+
+// 语言切换：同页中文版存在时直连，否则退回中文首页
+const zhCounterpart = await getEntry('docs', entry.id);
+const langHref = zhCounterpart ? '/zh/' + route : '/zh';
+const altCanonical = zhCounterpart ? new URL('/zh/' + route, Astro.site).href : undefined;
+---
+{
+  isEmpty ? (
+    <DocLayout title={entry.data.title} description={entry.data.description} route={route} langHref={langHref} altCanonical={altCanonical}>
+      <div class="page-empty">
+        <h1 class="page-title">{entry.data.title}</h1>
+        <div class="page-placeholder">{t.contentComingSoon}</div>
+      </div>
+    </DocLayout>
+  ) : (
+    <DocLayout
+      title={entry.data.title}
+      description={entry.data.description}
+      route={route}
+      date={entry.data.date}
+      updated={entry.data.updated}
+      langHref={langHref}
+      altCanonical={altCanonical}
+    >
+      <h1 class="page-title">{entry.data.title}</h1>
+      <article class="md">
+        <Content />
+      </article>
+      <PrevNext prev={pn.prev} next={pn.next} locale="en" />
+      <Comments locale="en" title={entry.data.title} />
+    </DocLayout>
+  )
+}

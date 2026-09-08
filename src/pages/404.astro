@@ -1,0 +1,13 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { ui } from '../data/ui';
+const t = ui('en');
+---
+<BaseLayout title={t.notFoundTitle} locale="en" route="" langHref="/zh">
+  <div class="page-empty">
+    <h1 class="page-title">{t.notFoundTitle}</h1>
+    <p>
+      {t.notFoundBody} <a href="/">{t.home}</a> · <a href="/zh">中文首页</a>
+    </p>
+  </div>
+</BaseLayout>

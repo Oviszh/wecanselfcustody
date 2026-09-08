@@ -1,0 +1,26 @@
+---
+import { NAV, routePrefix, type NavGroup, type Locale } from '../data/nav';
+import { ui } from '../data/ui';
+
+interface Props {
+  locale?: Locale;
+}
+const { locale = 'en' } = Astro.props;
+const t = ui(locale);
+
+/** 首页“下一篇”入口：全站阅读顺序的第一步 = 创建钱包（与导航数据保持单一真源） */
+const createWallet = NAV.flatMap((s) => s.children ?? []).find(
+  (n): n is NavGroup => 'children' in n && n.href === '/create-wallet'
+);
+if (!createWallet) {
+  throw new Error('NAV 中未找到 /create-wallet 分组');
+}
+const nextHref = routePrefix(locale) + createWallet.href!;
+const nextLabel = locale === 'en' ? createWallet.labelEn ?? createWallet.label : createWallet.label;
+---
+<section class="home-next" aria-label={t.next}>
+  <a class="home-next__item" href={nextHref}>
+    <span class="home-next__hint">{t.next}</span>
+    <span class="home-next__label">{nextLabel}</span>
+  </a>
+</section>

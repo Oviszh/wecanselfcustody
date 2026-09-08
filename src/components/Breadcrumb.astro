@@ -1,0 +1,26 @@
+---
+import type { Crumb } from '../data/nav';
+import { ui, type Locale } from '../data/ui';
+
+interface Props {
+  segments: Crumb[];
+  locale?: Locale;
+}
+const { segments, locale = 'en' } = Astro.props;
+const t = ui(locale);
+---
+<nav class="breadcrumb" aria-label={t.breadcrumbAria}>
+  <ol>
+    {
+      segments.map((s, i) => (
+        <li>
+          {s.route ? (
+            <a href={s.route}>{s.label}</a>
+          ) : (
+            <span aria-current={i === segments.length - 1 ? 'page' : undefined}>{s.label}</span>
+          )}
+        </li>
+      ))
+    }
+  </ol>
+</nav>

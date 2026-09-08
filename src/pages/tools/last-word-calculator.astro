@@ -1,0 +1,10 @@
+---
+import { fetchLatestToolRelease, stripToolDoctype } from '../../lib/tool-release';
+
+const toolHtml = await fetchLatestToolRelease({
+  repo: 'last-word-calculator',
+  asset: 'last-word-calculator.html',
+});
+const content = stripToolDoctype(toolHtml);
+---
+<Fragment set:html={content} />

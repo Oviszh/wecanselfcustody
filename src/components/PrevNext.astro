@@ -1,0 +1,38 @@
+---
+import type { FlatEntry } from '../data/nav';
+import { ui, type Locale } from '../data/ui';
+
+interface Props {
+  prev?: FlatEntry;
+  next?: FlatEntry;
+  locale?: Locale;
+}
+const { prev, next, locale = 'en' } = Astro.props;
+const t = ui(locale);
+---
+{
+  (prev || next) && (
+    <nav class="prevnext" aria-label={t.prevnextAria}>
+      {
+        prev ? (
+          <a class="prevnext__item" href={`/${prev.route}`}>
+            <span class="prevnext__hint">{t.prev}</span>
+            <span class="prevnext__label">{prev.label}</span>
+          </a>
+        ) : (
+          <span class="prevnext__item prevnext__item--empty"></span>
+        )
+      }
+      {
+        next ? (
+          <a class="prevnext__item prevnext__item--next" href={`/${next.route}`}>
+            <span class="prevnext__hint">{t.next}</span>
+            <span class="prevnext__label">{next.label}</span>
+          </a>
+        ) : (
+          <span class="prevnext__item prevnext__item--empty"></span>
+        )
+      }
+    </nav>
+  )
+}

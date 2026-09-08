@@ -1,0 +1,31 @@
+---
+import { getEntry, render } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import HomeNext from '../components/HomeNext.astro';
+
+// 英文首页（站点默认语言；中文首页在 /zh/）
+const home = await getEntry('docs-en', 'home');
+const { Content } = await render(home);
+---
+<BaseLayout isHome locale="en" langHref="/zh" altCanonical={new URL('/zh', Astro.site).href}>
+  <script is:inline>
+    // 旧 hash 链接迁移：#/for-humans/use-wallet/... -> /zh/use-wallet/...（历史中文链接）
+    (function () {
+      var m = location.hash.match(/^#\/(.*)$/);
+      if (!m || !m[1]) return;
+      var path = m[1].replace(/^for-humans\//, '');
+      location.replace('/zh/' + path);
+    })();
+  </script>
+
+  <header class="home-hero">
+    <p class="home-hero__eyebrow">For humans</p>
+    <h1 class="home-hero__title">Make self-custody<br><span class="accent">easy and safe</span></h1>
+  </header>
+
+  <article class="md home-intro">
+    <Content />
+  </article>
+
+  <HomeNext locale="en" />
+</BaseLayout>

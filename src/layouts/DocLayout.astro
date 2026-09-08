@@ -1,0 +1,68 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
+import { sectionsFor, splitLocaleRoute } from '../data/nav';
+import type { Locale } from '../data/ui';
+
+interface Props {
+  title: string;
+  description?: string;
+  route: string; // 完整路由（不带首斜杠；中文含 zh/ 前缀，英文默认无前缀）
+  locale?: Locale;
+  langHref?: string;
+  altCanonical?: string;
+  date?: Date;
+  updated?: Date;
+  image?: string;
+}
+
+const { title, description, route, locale: localeProp, langHref, altCanonical, date, updated, image } = Astro.props;
+const locale: Locale = localeProp ?? splitLocaleRoute(route).locale;
+const { rest } = splitLocaleRoute(route);
+const crumbs = sectionsFor(rest, locale);
+
+const canonical = new URL('/' + route, Astro.site);
+
+// JSON-LD：Article + BreadcrumbList
+const articleLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: title,
+  description,
+  datePublished: date,
+  dateModified: updated ?? date,
+  mainEntityOfPage: canonical.href,
+  inLanguage: locale === 'en' ? 'en' : 'zh-CN',
+  author: { '@type': 'Person', name: 'Self custody' },
+  publisher: { '@type': 'Organization', name: 'Self custody' },
+};
+
+const breadcrumbLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: crumbs.map((c, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    name: c.label,
+    ...(c.route ? { item: new URL(c.route, Astro.site).href } : {}),
+  })),
+};
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  route={route}
+  locale={locale}
+  langHref={langHref}
+  altCanonical={altCanonical}
+  ogType="article"
+  date={date}
+  updated={updated}
+  image={image}
+>
+  <script type="application/ld+json" is:inline set:html={JSON.stringify(articleLd)} />
+  <script type="application/ld+json" is:inline set:html={JSON.stringify(breadcrumbLd)} />
+  <Breadcrumb segments={crumbs} />
+  <slot />
+</BaseLayout>
